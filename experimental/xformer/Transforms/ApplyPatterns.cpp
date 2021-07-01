@@ -6,9 +6,9 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 namespace mlir {
@@ -95,12 +95,11 @@ DenseElementsAttr getLookupTable(PatternRewriter &rewriter, Operation *op) {
 #include "Transforms/GeneratedPatterns.inc"
 
 void ApplyPatterns::runOnFunction() {
-  OwningRewritePatternList patterns;
-  auto *ctx = &getContext();
+  OwningRewritePatternList patterns(&getContext());
   auto func = getFunction();
 
-  populateWithGenerated(ctx, patterns);
-  applyPatternsAndFoldGreedily(func, patterns);
+  populateWithGenerated(patterns);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 } // namespace
 

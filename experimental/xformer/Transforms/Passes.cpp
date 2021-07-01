@@ -10,9 +10,9 @@ namespace mlir {
 namespace xcore {
 
 void buildXCorePassPipeline(OpPassManager &pm) {
-  pm.addPass(createApplyPatternsPass());
-  pm.addPass(createLegalizeFullyConnectedPass());
-  pm.addPass(createTranslateToCustomOpPass());
+  pm.addNestedPass<mlir::FuncOp>(createApplyPatternsPass());
+  pm.addNestedPass<mlir::FuncOp>(createLegalizeFullyConnectedPass());
+  pm.addNestedPass<mlir::FuncOp>(createTranslateToCustomOpPass());
 }
 
 void registerXCorePassPipeline() {

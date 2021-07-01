@@ -16,9 +16,13 @@ namespace utils {
 LogicalResult writeMLIRToFlatBufferFile(std::string &filename,
                                         mlir::ModuleOp module) {
   std::string serialized_flatbuffer;
+  tflite::FlatbufferExportOptions options;
+  options.emit_builtin_tflite_ops = true;
+  options.emit_select_tf_ops = true;
+  options.emit_custom_ops = true;
 
-  if (!tflite::MlirToFlatBufferTranslateFunction(module, &serialized_flatbuffer,
-                                                 true, true, true)) {
+  if (!tflite::MlirToFlatBufferTranslateFunction(module, options,
+                                                 &serialized_flatbuffer)) {
     auto outputFile = openOutputFile(filename);
     if (!outputFile) {
       llvm::errs() << "Could not open output file: " << filename << "\n";
@@ -44,8 +48,8 @@ mlir::OwningModuleRef readFlatBufferFileToMLIR(std::string &filename,
     return mlir::OwningModuleRef(nullptr);
   }
 
-  auto loc = mlir::FileLineColLoc::get(inputFile->getBufferIdentifier(), 0, 0,
-                                       context);
+  auto loc = mlir::FileLineColLoc::get(context,
+                                       inputFile->getBufferIdentifier(), 0, 0);
   OwningModuleRef mod =
       tflite::FlatBufferToMlir(absl::string_view(inputFile->getBufferStart(),
                                                  inputFile->getBufferSize()),

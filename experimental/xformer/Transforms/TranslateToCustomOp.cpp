@@ -5,6 +5,7 @@
 
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tensorflow/compiler/mlir/lite/ir/tfl_ops.h"
 
 namespace mlir {
@@ -35,14 +36,12 @@ struct RewriteToCustomOp : public OpRewritePattern<XCoreOp> {
 };
 
 void TranslateToCustomOp::runOnFunction() {
-  OwningRewritePatternList patterns;
-  auto *ctx = &getContext();
+  OwningRewritePatternList patterns(&getContext());
   auto func = getFunction();
 
-  patterns.insert<RewriteToCustomOp<FullyConnectedOp>>(ctx);
-  patterns.insert<RewriteToCustomOp<Lookup8Op>>(ctx);
-
-  applyPatternsAndFoldGreedily(func, patterns);
+  patterns.insert<RewriteToCustomOp<FullyConnectedOp>>(&getContext());
+  patterns.insert<RewriteToCustomOp<Lookup8Op>>(&getContext());
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
 } // namespace
