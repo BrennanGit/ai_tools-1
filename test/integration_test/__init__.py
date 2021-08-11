@@ -104,7 +104,7 @@ class IntegrationTestRunner(Runner):
 
     @property
     def repr_data_example_count(self) -> int:
-        return 10
+        return 1
 
     def get_representative_data(self) -> tf.Tensor:
         try:
@@ -114,6 +114,7 @@ class IntegrationTestRunner(Runner):
                 self._representative_data = self._repr_data_factory.make_data(
                     self.repr_data_example_count
                 )
+                #self._representative_data = tf.constant([[[[1.0,0.0,0.0,0.0]]]])
             except AttributeError:
                 raise Exception(
                     "Cannot get quantization data before runner is run!"
@@ -302,6 +303,14 @@ class IntegrationTestModelGenerator(ModelGenerator):
     def build(self) -> None:
         self._prep_backend()
         self._model = self._build_core_model()
+
+        # l=[]
+        # x=np.array([[[ [0.,0,0,0], [1,0,0,0], [0,0,0,0], [0,0,0,0] ]]]) #weights
+        # y=np.array([0., 0., 0., 0.]) #array of biases
+        # l.append(x)
+        # l.append(y)
+        # self._model.set_weights(l)
+
         self._model.build(self._model.input_shape)
 
 

@@ -26,12 +26,12 @@ class Conv2dTestModelGenerator(Conv2dProperTestModelGenerator):
 
     def check_config(self) -> None:
         super().check_config()
-        assert (
-            self._config["K_w"] * self._config["input_channels"] > 32
-        ), "K_w * input_channels <= 32 is reserved for conv2d_shallowin testing"
-        assert (
-            self._config["K_h"] != 1 or self._config["K_w"] != 1
-        ), "1x1 kernel is reserved for conv2d_1x1 testing"
+        #assert (
+        #    self._config["K_w"] * self._config["input_channels"] > 32
+        #), "K_w * input_channels <= 32 is reserved for conv2d_shallowin testing"
+        #assert (
+        #    self._config["K_h"] != 1 or self._config["K_w"] != 1
+        #), "1x1 kernel is reserved for conv2d_1x1 testing"
 
 
 GENERATOR = Conv2dTestModelGenerator

@@ -38,7 +38,8 @@ class AbstractConv2dTestModelGenerator(FilterOpTestModelGenerator):
         self._config.update(
             {
                 "weight_init": cfg.pop("weight_init", ("RandomUniform", -1, 1)),
-                "bias_init": cfg.pop("bias_init", ("Constant", 0)),
+                #"weight_init": cfg.pop("weight_init", ("RandomUniform", 3, 3)),
+                "bias_init": cfg.pop("bias_init", ("Constant", 1)),
             }
         )
         cfg.setdefault("padding", "same")

@@ -173,6 +173,11 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     nn::MatMulDirectFn::Params afParams(
         X, K, args.inputDepth, rw.weights.data(), (int)rw.weights.size());
 
+    llvm::dbgs() << "      \n\n      reordered weights \n";
+    for (int i = 0; i < 16; i++) {
+      llvm::dbgs() << (int)rw.weights[i] << " ";
+    }
+
     nn::OutputTransformFnInt8::CanonicalMulAndBias canonicalValues =
         nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
             args.effectiveMultiplier, args.bias, args.filter,
@@ -327,6 +332,22 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     auto inputScale = inputQType.getScale();
     auto inputZeroPoint = inputQType.getZeroPoint();
 
+    llvm::dbgs() << "      \n\n      input height " << inputHeight;
+    llvm::dbgs() << "      \n\n      input width " << inputWidth;
+    llvm::dbgs() << "      \n\n      input depth " << inputDepth;
+    llvm::dbgs() << "      \n\n      input scale " << inputScale;
+    llvm::dbgs() << "      \n\n      input zero point " << inputZeroPoint;
+
+    llvm::dbgs() << "      \n\n      output height " << outputHeight;
+    llvm::dbgs() << "      \n\n      output width " << outputWidth;
+    llvm::dbgs() << "      \n\n      output depth " << outputDepth;
+    llvm::dbgs() << "      \n\n      output scale " << outputScale;
+    llvm::dbgs() << "      \n\n      output zero point " << outputZeroPoint;
+
+    llvm::dbgs() << "      \n\n      filter height " << filterHeight;
+    llvm::dbgs() << "      \n\n      filter width " << filterWidth;
+    llvm::dbgs() << "      \n\n      filter depth " << filterDepth;
+
     // Get filter values
     auto filterQConstOp =
         dyn_cast<TFL::QConstOp>(conv2DOp.filter().getDefiningOp());
@@ -334,12 +355,22 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     auto filterVector = std::vector<int8_t>{filter.getValues<int8_t>().begin(),
                                             filter.getValues<int8_t>().end()};
 
+    llvm::dbgs() << "      \n\n      filter \n";
+    for (auto i : filterVector) {
+      llvm::dbgs() << (int)i << " ";
+    }
+
     // Get bias values
     auto biasQConstOp =
         dyn_cast<TFL::QConstOp>(conv2DOp.bias().getDefiningOp());
     auto biases = biasQConstOp.value().cast<DenseElementsAttr>();
     auto biasVector = std::vector<int32_t>{biases.getValues<int32_t>().begin(),
                                            biases.getValues<int32_t>().end()};
+
+    llvm::dbgs() << "      \n\n      bias \n";
+    for (auto i : biasVector) {
+      llvm::dbgs() << i << " ";
+    }
 
     // Calculate effectiveOutputScale
     std::vector<float> effectiveOutputScaleVector;
@@ -389,6 +420,21 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     } else {
       padTop = padBottom = padLeft = padRight = 0;
     }
+
+    llvm::dbgs() << "      \n\n      pad top " << padTop;
+    llvm::dbgs() << "      \n\n      pad left " << padLeft;
+    llvm::dbgs() << "      \n\n      pad bottom " << padBottom;
+    llvm::dbgs() << "      \n\n      pad right " << padRight;
+
+    llvm::dbgs() << "      \n\n      strideh " << conv2DOp.stride_h();
+    llvm::dbgs() << "      \n\n      stridew " << conv2DOp.stride_w();
+    llvm::dbgs() << "      \n\n      dilationh "
+                 << conv2DOp.dilation_h_factor();
+    llvm::dbgs() << "      \n\n      dilationw "
+                 << conv2DOp.dilation_w_factor();
+
+    llvm::dbgs() << "      \n\n      kernel type "
+                 << stringifyConv2DType(kernelType) << " \n\n";
 
     // Create a struct of Conv2DArgs to pass in parameters
     Conv2DArgs args = {

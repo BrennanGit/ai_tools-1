@@ -67,6 +67,77 @@ std::vector<uint8_t> Conv2DV2Op::buildCustomOptions() {
 
   fbb.EndMap(rootMap);
   fbb.Finish();
+
+  // Test flatbuffer deserialization
+  // std::vector<uint8_t> test = fbb.GetBuffer();
+  // flexbuffers::Map root_map = flexbuffers::GetRoot(test).AsMap();
+  // flexbuffers::Vector thread_vec = root_map["threads"].AsVector();
+  // auto thread_count = thread_vec.size();
+  // flexbuffers::Vector params = thread_vec[0].AsVector();
+  // auto param_count = params.size();
+  // int32_t scratch = params[0].AsInt32();
+  // int32_t kernelType = params[1].AsInt32();
+
+  //   std::string akp_str = params[2].As<std::string>();
+  //   allocated_memory = (char *)std::malloc(sizeof(nn::Filter2D::Params));
+  //   nn::Filter2D::Params *newakp =
+  //       nn::Filter2D::Params::deserialise<nn::Filter2D::Params>(allocated_memory,
+  //                                                               akp_str.c_str());
+  //   free(allocated_memory);
+
+  // char *allocated_memory2;
+  // std::string ak_str = params[2].As<std::string>();
+  // int allocationByteCount2 = sizeof(nn::Filter2D::Params);
+  // allocated_memory2 = (char *)std::malloc(allocationByteCount2);
+  // nn::Filter2D::Params *akParams =
+  //     nn::Filter2D::Params::deserialise<nn::Filter2D::Params>(allocated_memory2,
+  //                                                             ak_str.c_str());
+
+  // char *allocated_memory3;
+  // std::string mf_str = params[3].As<std::string>();
+  // int allocationByteCount3 = sizeof(nn::ImToColPadded::Params);
+  // allocated_memory3 = (char *)std::malloc(allocationByteCount3);
+  // nn::ImToColPadded::Params *imToColParams =
+  //     nn::ImToColPadded::Params::deserialise<nn::ImToColPadded::Params>(
+  //         allocated_memory3, mf_str.c_str());
+
+  // char *allocated_memory4;
+  // std::string af_str = params[4].As<std::string>();
+  // int allocationByteCount4 =
+  //     nn::MatMulInt8::Params::get_allocation_byte_count(af_str.c_str()) +
+  //     sizeof(nn::MatMulInt8::Params);
+  // allocated_memory4 = (char *)std::malloc(allocationByteCount4);
+  // nn::MatMulInt8::Params *afParams =
+  //     nn::MatMulInt8::Params::deserialise<nn::MatMulInt8::Params>(
+  //         allocated_memory4, af_str.c_str());
+
+  // char *allocated_memory5;
+  // std::string ot_str = params[5].As<std::string>();
+  // int allocationByteCount5 =
+  //     nn::OT_int8::Params::get_allocation_byte_count(ot_str.c_str()) +
+  //     sizeof(nn::OT_int8::Params);
+  // allocated_memory5 = (char *)std::malloc(allocationByteCount5);
+  // nn::OT_int8::Params *otParams =
+  //     nn::OT_int8::Params::deserialise<nn::OT_int8::Params>(allocated_memory5,
+  //                                                           ot_str.c_str());
+  // llvm::dbgs() << "output multiplier1\n";
+  // for (int i = 0; i < newot1->output_slice_channel_count; ++i) {
+  //   llvm::dbgs() << newot1->multipliers[i] << "\n";
+  // }
+  // llvm::dbgs() << "output biases1\n";
+  // for (int i = 0; i < newot1->output_slice_channel_count; ++i) {
+  //   llvm::dbgs() << newot1->biases[i] << "\n";
+  // }
+
+  // nn::ImToColPadded memcpy(imToColParams);
+  // nn::MatMulInt8 aggregator(afParams);
+  // nn::OT_int8 ot(otParams);
+  // nn::Conv2dPaddedInDirect conv2d(akParams, &memcpy, &aggregator, &ot);
+
+  // nn::Filter2D *f = &conv2d;
+  // f->execute((int8_t *)afParams->weights, (int8_t *)afParams->weights,
+  //            (int8_t *)afParams->weights);
+
   return fbb.GetBuffer();
 }
 
