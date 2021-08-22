@@ -79,13 +79,21 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, &qp.otv, qp.biases,
                                  qp.multipliers);
 
+    llvm::dbgs() << "      \n\n      weights size " << rw.weights.size();
+    llvm::dbgs() << "      \n\n      biases size " << qp.biases.size();
+    llvm::dbgs() << "      \n\n      multipliers size "
+                 << qp.multipliers.size();
+
     auto ir = nn::ImageRegion(0, 0, 0, Y.height, Y.width, Y.depth);
     nn::Filter2D::Params akParams(Y, ir, VPU_INT8_ACC_PERIOD);
 
     // TODO: Check serialization
     std::string akpStr = akParams.serialise<nn::Filter2D::Params>();
     std::string mfStr = imToColParams.serialise<nn::ImToColPadded::Params>();
-    std::string afStr = afParams.serialise<nn::MatMulInt8::Params>();
+    // std::string afStr = afParams.serialise<nn::MatMulInt8::Params>();
+    std::string afStr(reinterpret_cast<const char *>(&afParams),
+                      sizeof(afParams));
+
     std::string otStr = otParams.serialise<nn::OT_int8::Params>();
 
     conv2DParams.push_back(akpStr);
@@ -134,6 +142,11 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, &qp.otv, qp.biases,
                                  qp.multipliers);
 
+    llvm::dbgs() << "      \n\n      weights size " << rw.weights.size();
+    llvm::dbgs() << "      \n\n      biases size " << qp.biases.size();
+    llvm::dbgs() << "      \n\n      multipliers size "
+                 << qp.multipliers.size();
+
     auto ir = nn::ImageRegion(0, 0, 0, Y.height, Y.width, Y.depth);
     nn::Filter2D::Params akParams(Y, ir, VPU_INT8_ACC_PERIOD);
 
@@ -173,6 +186,11 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     nn::MatMulDirectFn::Params afParams(
         X, K, args.inputDepth, rw.weights.data(), (int)rw.weights.size());
 
+    llvm::dbgs() << "      \n\n      reordered weights \n";
+    for (int i = 0; i < 16; i++) {
+      llvm::dbgs() << (int)rw.weights[i] << " ";
+    }
+
     nn::OutputTransformFnInt8::CanonicalMulAndBias canonicalValues =
         nn::OutputTransformFnInt8::canonicalise_mul_and_bias(
             args.effectiveMultiplier, args.bias, args.filter,
@@ -182,6 +200,11 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
         canonicalValues.accu_min, canonicalValues.accu_max);
     nn::OT_int8::Params otParams((int32_t)args.outputDepth, &qp.otv, qp.biases,
                                  qp.multipliers);
+
+    llvm::dbgs() << "      \n\n      weights size " << rw.weights.size();
+    llvm::dbgs() << "      \n\n      biases size " << qp.biases.size();
+    llvm::dbgs() << "      \n\n      multipliers size "
+                 << qp.multipliers.size();
 
     auto ir = nn::ImageRegion(0, 0, 0, Y.height, Y.width, Y.depth);
     nn::Filter2D::Params akParams(Y, ir, VPU_INT8_ACC_PERIOD);
@@ -272,12 +295,12 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
     // implementation
     auto outputDepth =
         conv2DOp.output().getType().cast<ShapedType>().getDimSize(3);
-    if (outputDepth % 4 != 0) {
+    auto inputDepth =
+        conv2DOp.input().getType().cast<ShapedType>().getDimSize(3);
+    if (outputDepth % 4 != 0 || inputDepth % 4 != 0) {
       return failure();
     }
 
-    auto inputDepth =
-        conv2DOp.input().getType().cast<ShapedType>().getDimSize(3);
     auto filterHeight =
         conv2DOp.filter().getType().cast<ShapedType>().getDimSize(1);
     auto filterWidth =
@@ -470,11 +493,34 @@ struct ReplaceWithConv2DV2Pattern : public OpRewritePattern<TFL::Conv2DOp> {
       return rewriter.getArrayAttr(attrs);
     };
 
+    std::array<int, 4> shape = {args.outputDepth, args.filterHeight,
+                                args.filterWidth, args.inputDepth};
+    nn::Conv2dReorderedWeights rw = nn::MatMulInt8::reorder_kernel_weights(
+        (int8_t *)args.filter.data(), shape, 8, args.padValue);
+
+    // llvm::SmallVector<int8_t> weightsVec{1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
+    ShapedType newWeightType =
+        RankedTensorType::get({static_cast<long long>(rw.weights.size())},
+                              rewriter.getIntegerType(8));
+    auto newWeightAttr =
+        DenseElementsAttr::get<int8_t>(newWeightType, rw.weights);
+    auto newWeightConstantOp =
+        rewriter.create<mlir::ConstantOp>(conv2DOp.getLoc(), newWeightAttr);
+
+    llvm::SmallVector<int16_t> biasesVec{11, 12, 13, 14, 15,
+                                         16, 17, 18, 19, 10};
+    ShapedType newBiasType =
+        RankedTensorType::get({1, (10)}, rewriter.getIntegerType(16));
+    auto newBiasAttr = DenseElementsAttr::get<int16_t>(newBiasType, biasesVec);
+    auto newBiasConstantOp =
+        rewriter.create<mlir::ConstantOp>(conv2DOp.getLoc(), newBiasAttr);
+
     // Create the Conv2DV2 Op with the params and kernel type
     auto newConv2DV2Op = rewriter.create<Conv2DV2Op>(
         conv2DOp.getLoc(), conv2DOp.getType(), conv2DOp.input(),
         rewriter.getI32IntegerAttr(threadCount),
-        rewriter.getI32ArrayAttr(scratchByteParams),
+        rewriter.getI32ArrayAttr(scratchByteParams), newWeightConstantOp,
+        newBiasConstantOp, newBiasConstantOp,
         getStringArrayAttr(abstractKernelParams),
         getStringArrayAttr(memcpyFnParams),
         getStringArrayAttr(aggregateFnParams),
